@@ -6,6 +6,17 @@ Precios de carburante por estación de servicio en España, Francia, Portugal, I
 
 El APK de cada versión está en [Releases](https://github.com/aitorsola/gas4oil-android/releases). Requiere Android 8.0 (API 26) o superior.
 
+<p align="center">
+  <img src="docs/screenshots/estaciones.png" width="200" alt="Listado de estaciones" />
+  <img src="docs/screenshots/combustible-orden.png" width="200" alt="Filtro de combustible y orden" />
+  <img src="docs/screenshots/marcas.png" width="200" alt="Filtro por marca" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/pais.png" width="200" alt="Selector de país" />
+  <img src="docs/screenshots/poblacion.png" width="200" alt="Selector de población" />
+  <img src="docs/screenshots/vehiculo.png" width="200" alt="Mi vehículo con el coste de llenado" />
+</p>
+
 ## Funciones
 
 - Estaciones ordenadas por cercanía, precio ascendente o descendente
@@ -18,11 +29,19 @@ El APK de cada versión está en [Releases](https://github.com/aitorsola/gas4oil
 
 ## Fuentes de datos
 
-- España: Ministerio para la Transición Ecológica
-- Francia: data.economie.gouv.fr
-- Portugal: DGEG
-- Italia: MIMIT
-- Croacia: Ministarstvo gospodarstva
+| País | Fuente | Formato |
+|---|---|---|
+| España | Ministerio para la Transición Ecológica | JSON, ~12 MB |
+| Francia | data.economie.gouv.fr | JSON comprimido, ~1 MB |
+| Portugal | DGEG | JSON, ~4 MB |
+| Italia | MIMIT | Dos CSV, ~6 MB |
+| Croacia | Ministarstvo gospodarstva | JSON, ~4 MB |
+
+Cada país es un caso de `Country` y una rama en `StationsApi`; los modelos de cada feed están en `Feeds.kt`.
+
+## Arquitectura
+
+Kotlin y Jetpack Compose (Material 3), un único `StationsViewModel` con `StateFlow`, OkHttp con TLS 1.2 forzado para el servidor español, kotlinx-serialization para los JSON y `LocationManager` con permiso de ubicación aproximada.
 
 ## Compilar
 
