@@ -28,7 +28,6 @@
     <string name="listview_sort_title">Sort by</string>
     <string name="listview_sortorder_near">Nearest</string>
     <string name="listview_sortorder_down">Lowest price</string>
-    <string name="listview_sortorder_up">Highest price</string>
     <string name="listview_brand_all">All brands</string>
     <string name="listview_sorttype_all_button">All</string>
     <string name="listview_sorttype_near95_button">Nearest 95</string>
@@ -68,7 +67,6 @@
     <string name="myvehicle_ad_title">Add a vehicle</string>
     <string name="myvehicle_ad_description">Add a vehicle and you will know in advance what a full tank costs at each station.</string>
     <string name="myvehicle_fill_title">A full tank costs</string>
-    <string name="myvehicle_fill_cheapestat">Cheapest at %1$s (%2$s).</string>
     <string name="myvehicle_fill_footer">Worked out from the stations you have loaded right now.</string>
     <string name="myvehicle_fill_unavailable">No stations loaded with this fuel yet.</string>
     <string name="error_invalidurl">The service address is not valid</string>
@@ -98,4 +96,5 @@
     <string name="country_portugal">Portugal</string>
     <string name="country_italy">Italy</string>
     <string name="country_croatia">Croatia</string>
+    <string name="listview_cheapest_title">Cheapest · %1$s</string>
 </resources>

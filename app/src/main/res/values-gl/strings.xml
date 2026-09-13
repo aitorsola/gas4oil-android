@@ -28,7 +28,6 @@
     <string name="listview_sort_title">Ordenar por</string>
     <string name="listview_sortorder_near">Proximidade</string>
     <string name="listview_sortorder_down">Prezo máis baixo</string>
-    <string name="listview_sortorder_up">Prezo máis alto</string>
     <string name="listview_brand_all">Todas as marcas</string>
     <string name="listview_sorttype_all_button">Todo</string>
     <string name="listview_sorttype_near95_button">Preto 95</string>
@@ -68,7 +67,6 @@
     <string name="myvehicle_ad_title">Engade un vehículo</string>
     <string name="myvehicle_ad_description">Engade un vehículo e saberás de antemán canto che custará encher o depósito en cada estación.</string>
     <string name="myvehicle_fill_title">Encher o depósito custa</string>
-    <string name="myvehicle_fill_cheapestat">O máis barato, en %1$s (%2$s).</string>
     <string name="myvehicle_fill_footer">Calculado coas estacións que tes cargadas agora mesmo.</string>
     <string name="myvehicle_fill_unavailable">Aínda non hai estacións cargadas con este combustible.</string>
     <string name="error_invalidurl">O enderezo do servizo non é válido</string>
@@ -98,4 +96,5 @@
     <string name="country_portugal">Portugal</string>
     <string name="country_italy">Italia</string>
     <string name="country_croatia">Croacia</string>
+    <string name="listview_cheapest_title">A máis barata · %1$s</string>
 </resources>

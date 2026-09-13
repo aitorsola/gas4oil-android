@@ -1,5 +1,15 @@
 package com.aitorsola.gas4oil
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,9 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
@@ -87,18 +95,6 @@ fun StationsScreen(
 
     Scaffold(
         modifier = modifier,
-        floatingActionButton = {
-            if (state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice) {
-                FloatingActionButton(
-                    onClick = onRequestLocation,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Filled.MyLocation, stringResource(R.string.listview_city_uselocation))
-                }
-            }
-        },
         topBar = {
             TopAppBar(
                 title = {
@@ -110,21 +106,17 @@ fun StationsScreen(
                     )
                 },
                 actions = {
-                    if (!state.needsCountryChoice) {
-                        CountryMenu(viewModel, state)
-                        if (state.brandOptions.isNotEmpty()) BrandMenu(viewModel, state)
-                        FuelSortMenu(viewModel, state)
-                    }
                     ThemeMenu(viewModel, state)
                 }
             )
         }
     ) { inner ->
-    Column(
+    Box(
         Modifier
             .padding(inner)
             .fillMaxSize()
     ) {
+    Column(Modifier.fillMaxSize()) {
         if (!(state.isLoaded && state.needsCityChoice) && !state.needsCountryChoice) {
             SearchField(query, onQueryChange = { query = it }, viewModel = viewModel)
         }
@@ -149,16 +141,21 @@ fun StationsScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             ) {
-              LazyColumn(Modifier.fillMaxSize()) {
-                val vehicle = state.vehicle
-                val cost = if (vehicle != null && vehicle.isValid)
-                    vehicle.fillCost(viewModel.fillCandidates()) else null
-                if (cost != null) {
-                    item(key = "fillCost") {
+              LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
+                val cheapest = state.cheapestNearby
+                val unit = cheapest?.price(state.fuel)
+                if (cheapest != null && unit != null) {
+                    val vehicle = state.vehicle
+                    val tank = if (vehicle != null && vehicle.isValid && vehicle.fuel == state.fuel)
+                        vehicle.capacityLitres?.let { it * unit } else null
+                    item(key = "cheapest") {
                         FillCostCard(
-                            cost,
-                            viewModel.distanceTo(cost.cheapestStation),
-                            Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            station = cheapest,
+                            fuel = state.fuel,
+                            pricePerLitre = unit,
+                            fillCost = tank,
+                            distance = viewModel.distanceTo(cheapest),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
                     }
                 }
@@ -174,6 +171,10 @@ fun StationsScreen(
               }
             }
         }
+    }
+    if (state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice) {
+        FilterControls(viewModel, state, onRequestLocation, Modifier.align(Alignment.BottomCenter))
+    }
     }
     }
 }
@@ -603,18 +604,129 @@ private fun PriceCell(
 }
 
 @Composable
+private fun FilterControls(
+    viewModel: StationsViewModel,
+    state: StationsUiState,
+    onRequestLocation: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Spacer(Modifier.size(56.dp))
+        Spacer(Modifier.weight(1f))
+        FilterBar(viewModel, state)
+        Spacer(Modifier.weight(1f))
+        FloatingActionButton(
+            onClick = onRequestLocation,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = CircleShape,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Icon(Icons.Filled.NearMe, stringResource(R.string.listview_city_uselocation))
+        }
+    }
+}
+
+@Composable
+private fun FilterBar(viewModel: StationsViewModel, state: StationsUiState) {
+    Row(
+        Modifier
+            .height(56.dp)
+            .shadow(8.dp, CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), CircleShape)
+            .padding(horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CountryMenu(viewModel, state)
+        if (state.brandOptions.isNotEmpty()) {
+            BarDivider()
+            BrandMenu(viewModel, state)
+        }
+        BarDivider()
+        FuelSortMenu(viewModel, state)
+    }
+}
+
+@Composable
+private fun BarDivider() {
+    Box(
+        Modifier
+            .width(1.dp)
+            .height(24.dp)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    )
+}
+
+@Composable
+private fun BarSegment(
+    title: String?,
+    active: Boolean,
+    onClick: () -> Unit,
+    leading: @Composable () -> Unit
+) {
+    val tint = MaterialTheme.colorScheme.onSurface
+    Row(
+        Modifier
+            .height(44.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompositionLocalProvider(LocalContentColor provides tint) { leading() }
+        if (title != null) {
+            Spacer(Modifier.width(6.dp))
+            Text(
+                title,
+                color = tint,
+                fontSize = 16.sp,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 90.dp)
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Icon(
+            Icons.Filled.KeyboardArrowDown, null, Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun fuelTag(fuel: FuelType): String = when (fuel) {
+    FuelType.GAS95 -> "95"
+    FuelType.GAS95_PREMIUM -> "95+"
+    FuelType.GAS98 -> "98"
+    FuelType.DIESEL -> stringResource(R.string.fuel_diesel_short)
+    FuelType.DIESEL_PREMIUM -> stringResource(R.string.fuel_dieselpremium)
+    FuelType.GLP -> "GLP"
+    FuelType.E10 -> "E10"
+    FuelType.E85 -> "E85"
+}
+
+@Composable
 private fun CountryMenu(viewModel: StationsViewModel, state: StationsUiState) {
     var open by remember { mutableStateOf(false) }
-    TextButton(onClick = { open = true }) {
-        Text(state.country.flag + " " + state.country.code, color = MaterialTheme.colorScheme.primary)
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-        Country.entries.forEach { country ->
-            DropdownMenuItem(
-                text = { Text(country.flag + " " + stringResource(country.nameRes)) },
-                leadingIcon = { if (state.country == country) Icon(Icons.Filled.Check, null) },
-                onClick = { viewModel.showCountry(country); open = false }
-            )
+    Box {
+        BarSegment(title = null, active = false, onClick = { open = true }) {
+            Text(state.country.flag, fontSize = 22.sp)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            Country.entries.forEach { country ->
+                DropdownMenuItem(
+                    text = { Text(country.flag + " " + stringResource(country.nameRes)) },
+                    leadingIcon = { if (state.country == country) Icon(Icons.Filled.Check, null) },
+                    onClick = { viewModel.showCountry(country); open = false }
+                )
+            }
         }
     }
 }
@@ -622,31 +734,42 @@ private fun CountryMenu(viewModel: StationsViewModel, state: StationsUiState) {
 @Composable
 private fun BrandMenu(viewModel: StationsViewModel, state: StationsUiState) {
     var open by remember { mutableStateOf(false) }
-    IconButton(onClick = { open = true }) {
-        Icon(Icons.Filled.LocalGasStation, null, tint = MaterialTheme.colorScheme.primary)
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.listview_brand_all)) },
-            leadingIcon = { if (state.brand == null) Icon(Icons.Filled.Check, null) },
-            onClick = { viewModel.showBrand(null); open = false }
-        )
-        HorizontalDivider()
-        state.brandOptions.forEach { option ->
+    val selected = state.brandOptions.firstOrNull { it.key == state.brand }
+    Box {
+        BarSegment(title = selected?.title, active = selected != null, onClick = { open = true }) {
+            val logo = selected?.logo
+            if (logo != null) {
+                Image(
+                    painterResource(logo.drawable), null,
+                    Modifier.size(26.dp).background(Color.White, CircleShape).padding(3.dp)
+                )
+            } else {
+                Icon(Icons.Filled.LocalGasStation, null, Modifier.size(20.dp))
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(option.title) },
-                leadingIcon = {
-                    when {
-                        state.brand == option.key -> Icon(Icons.Filled.Check, null)
-                        option.logo != null -> Image(
-                            painterResource(option.logo.drawable), null,
-                            Modifier.size(24.dp).background(Color.White, CircleShape).padding(2.dp)
-                        )
-                        else -> Icon(Icons.Filled.LocalGasStation, null)
-                    }
-                },
-                onClick = { viewModel.showBrand(option.key); open = false }
+                text = { Text(stringResource(R.string.listview_brand_all)) },
+                leadingIcon = { if (state.brand == null) Icon(Icons.Filled.Check, null) },
+                onClick = { viewModel.showBrand(null); open = false }
             )
+            HorizontalDivider()
+            state.brandOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.title) },
+                    leadingIcon = {
+                        when {
+                            state.brand == option.key -> Icon(Icons.Filled.Check, null)
+                            option.logo != null -> Image(
+                                painterResource(option.logo.drawable), null,
+                                Modifier.size(24.dp).background(Color.White, CircleShape).padding(2.dp)
+                            )
+                            else -> Icon(Icons.Filled.LocalGasStation, null)
+                        }
+                    },
+                    onClick = { viewModel.showBrand(option.key); open = false }
+                )
+            }
         }
     }
 }
@@ -654,49 +777,54 @@ private fun BrandMenu(viewModel: StationsViewModel, state: StationsUiState) {
 @Composable
 private fun FuelSortMenu(viewModel: StationsViewModel, state: StationsUiState) {
     var open by remember { mutableStateOf(false) }
-    IconButton(onClick = { open = true }) {
-        Icon(Icons.AutoMirrored.Filled.Sort, null, tint = MaterialTheme.colorScheme.primary)
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-        Text(
-            stringResource(R.string.common_fueltype),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        state.country.fuels.forEach { fuel ->
-            DropdownMenuItem(
-                text = { Text(stringResource(fuel.labelRes)) },
-                leadingIcon = {
-                    Icon(
-                        if (state.fuel == fuel) Icons.Filled.Check else Icons.Filled.WaterDrop,
-                        null
-                    )
-                },
-                onClick = { viewModel.showFuel(fuel); open = false }
+    val active = state.hasCoordinates && state.sort != StationSort.NEAREST
+    Box {
+        BarSegment(title = fuelTag(state.fuel), active = active, onClick = { open = true }) {
+            Icon(
+                if (state.effectiveSort == StationSort.NEAREST) Icons.Filled.NearMe else Icons.Filled.ArrowDownward,
+                null,
+                Modifier.size(18.dp)
             )
         }
-        HorizontalDivider()
-        Text(
-            stringResource(R.string.listview_sort_title),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        StationSort.entries.forEach { sort ->
-            val label = when (sort) {
-                StationSort.NEAREST -> R.string.listview_sortorder_near
-                StationSort.CHEAPEST -> R.string.listview_sortorder_down
-                StationSort.PRICIEST -> R.string.listview_sortorder_up
-            }
-            val icon = when (sort) {
-                StationSort.NEAREST -> Icons.Filled.MyLocation
-                StationSort.CHEAPEST -> Icons.Filled.ArrowDownward
-                StationSort.PRICIEST -> Icons.Filled.ArrowUpward
-            }
-            DropdownMenuItem(
-                text = { Text(stringResource(label)) },
-                leadingIcon = { Icon(if (state.sort == sort) Icons.Filled.Check else icon, null) },
-                onClick = { viewModel.showSort(sort); open = false }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            Text(
+                stringResource(R.string.common_fueltype),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
+            state.country.fuels.forEach { fuel ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(fuel.labelRes)) },
+                    leadingIcon = {
+                        Icon(
+                            if (state.fuel == fuel) Icons.Filled.Check else Icons.Filled.WaterDrop,
+                            null
+                        )
+                    },
+                    onClick = { viewModel.showFuel(fuel); open = false }
+                )
+            }
+            HorizontalDivider()
+            Text(
+                stringResource(R.string.listview_sort_title),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            StationSort.entries.filter { state.hasCoordinates || it != StationSort.NEAREST }.forEach { sort ->
+                val label = when (sort) {
+                    StationSort.NEAREST -> R.string.listview_sortorder_near
+                    StationSort.CHEAPEST -> R.string.listview_sortorder_down
+                }
+                val icon = when (sort) {
+                    StationSort.NEAREST -> Icons.Filled.MyLocation
+                    StationSort.CHEAPEST -> Icons.Filled.ArrowDownward
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    leadingIcon = { Icon(if (state.effectiveSort == sort) Icons.Filled.Check else icon, null) },
+                    onClick = { viewModel.showSort(sort); open = false }
+                )
+            }
         }
     }
 }

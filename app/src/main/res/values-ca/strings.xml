@@ -28,7 +28,6 @@
     <string name="listview_sort_title">Ordena per</string>
     <string name="listview_sortorder_near">Proximitat</string>
     <string name="listview_sortorder_down">Preu més baix</string>
-    <string name="listview_sortorder_up">Preu més alt</string>
     <string name="listview_brand_all">Totes les marques</string>
     <string name="listview_sorttype_all_button">Tot</string>
     <string name="listview_sorttype_near95_button">A prop 95</string>
@@ -68,7 +67,6 @@
     <string name="myvehicle_ad_title">Afegeix un vehicle</string>
     <string name="myvehicle_ad_description">Afegeix un vehicle i sabràs per endavant què et costarà omplir el dipòsit a cada estació.</string>
     <string name="myvehicle_fill_title">Omplir el dipòsit costa</string>
-    <string name="myvehicle_fill_cheapestat">El més barat, a %1$s (%2$s).</string>
     <string name="myvehicle_fill_footer">Calculat amb les estacions que tens carregades ara mateix.</string>
     <string name="myvehicle_fill_unavailable">Encara no hi ha estacions carregades amb aquest combustible.</string>
     <string name="error_invalidurl">L\'adreça del servei no és vàlida</string>
@@ -98,4 +96,5 @@
     <string name="country_portugal">Portugal</string>
     <string name="country_italy">Itàlia</string>
     <string name="country_croatia">Croàcia</string>
+    <string name="listview_cheapest_title">La més barata · %1$s</string>
 </resources>

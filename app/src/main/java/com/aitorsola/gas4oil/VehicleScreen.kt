@@ -75,13 +75,20 @@ fun VehicleScreen(
     ) {
         if (saved != null) {
             val cost = saved.fillCost(viewModel.fillCandidates())
+            val unit = cost?.cheapestStation?.price(saved.fuel)
             Text(
                 saved.displayName.ifBlank { stringResource(R.string.myvehicle_unnamed) },
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
-            if (cost != null) {
-                FillCostCard(cost, viewModel.distanceTo(cost.cheapestStation))
+            if (cost != null && unit != null) {
+                FillCostCard(
+                    station = cost.cheapestStation,
+                    fuel = saved.fuel,
+                    pricePerLitre = unit,
+                    fillCost = cost.cheapest,
+                    distance = viewModel.distanceTo(cost.cheapestStation)
+                )
             } else {
                 Card(Modifier.fillMaxWidth()) {
                     Text(

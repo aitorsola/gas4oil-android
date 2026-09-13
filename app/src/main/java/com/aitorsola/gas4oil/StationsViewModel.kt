@@ -18,6 +18,7 @@ data class StationsUiState(
     val isLoaded: Boolean = false,
     val loadErrorKind: G4OException.Kind? = null,
     val stations: List<Station> = emptyList(),
+    val cheapestNearby: Station? = null,
     val municipios: List<String> = emptyList(),
     val brandOptions: List<BrandOption> = emptyList(),
     val favourites: List<Station> = emptyList(),
@@ -39,6 +40,8 @@ data class StationsUiState(
     val needsCityChoice: Boolean get() = !hasCoordinates && city == null
 
     val needsCountryChoice: Boolean get() = !hasChosenCountry && !isLocating
+
+    val effectiveSort: StationSort get() = if (hasCoordinates) sort else StationSort.CHEAPEST
 
     val suggestedCities: List<String>
         get() = country.suggestedCities.filter { municipios.contains(it) }
@@ -67,7 +70,8 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
         StationsUiState(
             country = startCountry,
             hasChosenCountry = savedCountry != null,
-            fuel = prefs.fuel.takeIf { startCountry.fuels.contains(it) } ?: startCountry.defaultFuel,
+            fuel = prefs.fuel.takeIf { prefs.hasFuel && startCountry.fuels.contains(it) }
+                ?: preferredFuel(startCountry, prefs.vehicle),
             sort = prefs.sort,
             brand = prefs.brand,
             theme = prefs.theme,
@@ -171,9 +175,9 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val fuel = when {
-            firstChoice && !prefs.hasFuel -> country.defaultFuel
+            firstChoice && !prefs.hasFuel -> preferredFuel(country, current.vehicle)
             country.fuels.contains(current.fuel) -> current.fuel
-            else -> country.defaultFuel
+            else -> preferredFuel(country, current.vehicle)
         }
         prefs.fuel = fuel
         prefs.brand = null
@@ -302,6 +306,8 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
     fun saveVehicle(vehicle: Vehicle) {
         prefs.vehicle = vehicle
         _state.update { it.copy(vehicle = vehicle) }
+        val current = _state.value
+        if (current.country.fuels.contains(vehicle.fuel) && vehicle.fuel != current.fuel) showFuel(vehicle.fuel)
     }
 
     fun removeVehicle() {
@@ -317,7 +323,13 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(favourites = current) }
     }
 
-    fun fillCandidates(): List<Station> = fillCandidates(_state.value.stations, coordinates)
+    fun fillCandidates(): List<Station> {
+        val city = searchCity
+        return priceScope(allStations.filter { city == null || searchKeys[it.id]?.contains(city) == true })
+    }
+
+    private fun priceScope(stations: List<Station>): List<Station> =
+        if (searchCity != null) stations else fillCandidates(stations, coordinates)
 
     suspend fun reload() {
         load()
@@ -335,35 +347,33 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refresh() {
-        val fuel = _state.value.fuel
-        val brand = _state.value.brand
+        val current = _state.value
+        val fuel = current.fuel
+        val brand = current.brand
         val city = searchCity
         val filtered = allStations.filter { station ->
             (city == null || searchKeys[station.id]?.contains(city) == true) &&
                 (brand == null || Text.brandMatches(station.rotulo, brand)) &&
                 station.price(fuel) != null
         }
+        val byPrice = priceScope(filtered).sortedBy { it.price(fuel) ?: Double.MAX_VALUE }
         val here = coordinates
-        val capped = if (here == null) {
-            sortedByPrice(filtered, fuel).take(MAX_RESULTS)
-        } else {
+        val list = if (here != null && current.sort == StationSort.NEAREST) {
             val result = FloatArray(1)
-            val byDistance = filtered.sortedBy { station ->
+            filtered.sortedBy { station ->
                 Location.distanceBetween(
                     here.latitude, here.longitude, station.latitude, station.longitude, result
                 )
                 result[0]
-            }
-            sortedByPrice(byDistance.take(MAX_RESULTS), fuel)
+            }.take(MAX_RESULTS)
+        } else {
+            byPrice.take(MAX_RESULTS)
         }
-        _state.update { it.copy(stations = capped) }
+        _state.update { it.copy(stations = list, cheapestNearby = byPrice.firstOrNull()) }
     }
 
-    private fun sortedByPrice(stations: List<Station>, fuel: FuelType) = when (_state.value.sort) {
-        StationSort.NEAREST -> stations
-        StationSort.CHEAPEST -> stations.sortedBy { it.price(fuel) ?: Double.MAX_VALUE }
-        StationSort.PRICIEST -> stations.sortedByDescending { it.price(fuel) ?: 0.0 }
-    }
+    private fun preferredFuel(country: Country, vehicle: Vehicle?): FuelType =
+        vehicle?.fuel?.takeIf { country.fuels.contains(it) } ?: country.defaultFuel
 
     private companion object {
         const val MAX_RESULTS = 200

@@ -45,10 +45,21 @@ fun formatDistance(metres: Float): String =
     if (metres < 1000) "${metres.toInt()} m"
     else String.format("%.1f km", metres / 1000).replace('.', ',')
 
+fun perLitre(value: Double): String =
+    String.format(java.util.Locale.ROOT, "%.3f €/l", value).replace('.', ',')
+
 @Composable
-fun FillCostCard(cost: FillCost, distance: Float?, modifier: Modifier = Modifier) {
+fun FillCostCard(
+    station: Station,
+    fuel: FuelType,
+    pricePerLitre: Double,
+    fillCost: Double?,
+    distance: Float?,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
-    val station = cost.cheapestStation
+    val place = "${station.displayTitle} (${station.municipio.replaceFirstChar { it.uppercase() }})"
+    val detail = if (fillCost == null) place else "$place · ${perLitre(pricePerLitre)}"
     val logo = Text.brandTokens(station.rotulo).firstNotNullOfOrNull { StationBrandLogo.from(it) }
     Column(
         modifier
@@ -59,12 +70,13 @@ fun FillCostCard(cost: FillCost, distance: Float?, modifier: Modifier = Modifier
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.myvehicle_fill_title),
+                    if (fillCost == null) stringResource(R.string.listview_cheapest_title, stringResource(fuel.labelRes))
+                    else stringResource(R.string.myvehicle_fill_title),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
                 Text(
-                    euros(cost.cheapest),
+                    fillCost?.let { euros(it) } ?: perLitre(pricePerLitre),
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
                     color = PriceGreen
@@ -88,11 +100,7 @@ fun FillCostCard(cost: FillCost, distance: Float?, modifier: Modifier = Modifier
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(
-                    R.string.myvehicle_fill_cheapestat,
-                    station.displayTitle,
-                    station.municipio.replaceFirstChar { it.uppercase() }
-                ),
+                detail,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier.weight(1f)

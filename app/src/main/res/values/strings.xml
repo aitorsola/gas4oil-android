@@ -29,7 +29,6 @@
     <string name="listview_sort_title">Ordenar por</string>
     <string name="listview_sortorder_near">Cercanía</string>
     <string name="listview_sortorder_down">Precio más bajo</string>
-    <string name="listview_sortorder_up">Precio más alto</string>
     <string name="listview_brand_all">Todas las marcas</string>
     <string name="listview_sorttype_all_button">Todo</string>
     <string name="listview_sorttype_near95_button">Cerca 95</string>
@@ -69,7 +68,6 @@
     <string name="myvehicle_ad_title">Añade un vehículo</string>
     <string name="myvehicle_ad_description">¿Sabías que puedes añadir un vehículo de forma que podrás saber de antemano cuánto te costará llenar el depósito en cada gasolinera?</string>
     <string name="myvehicle_fill_title">Llenar el depósito cuesta</string>
-    <string name="myvehicle_fill_cheapestat">Lo más barato, en %1$s (%2$s).</string>
     <string name="myvehicle_fill_footer">Calculado con las estaciones que tienes cargadas ahora mismo.</string>
     <string name="myvehicle_fill_unavailable">Todavía no hay estaciones cargadas con este combustible.</string>
     <string name="error_invalidurl">La dirección del servicio no es válida</string>
@@ -99,4 +97,5 @@
     <string name="country_portugal">Portugal</string>
     <string name="country_italy">Italia</string>
     <string name="country_croatia">Croacia</string>
+    <string name="listview_cheapest_title">La más barata · %1$s</string>
 </resources>
