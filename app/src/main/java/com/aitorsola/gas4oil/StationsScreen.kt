@@ -1,5 +1,16 @@
 package com.aitorsola.gas4oil
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
@@ -48,7 +59,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -92,11 +102,33 @@ fun StationsScreen(
     var query by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
+    var isFilterBarVisible by remember { mutableStateOf(true) }
+    val hideOnScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -4f) isFilterBarVisible = false
+                else if (available.y > 4f) isFilterBarVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(state.stations) { isFilterBarVisible = true }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (!state.needsCountryChoice) {
+                        IconButton(onClick = onRequestLocation) {
+                            Icon(
+                                Icons.Filled.NearMe,
+                                contentDescription = stringResource(R.string.listview_city_uselocation),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 title = {
                     Text(
                         if (state.needsCountryChoice) stringResource(R.string.app_name)
@@ -115,6 +147,7 @@ fun StationsScreen(
         Modifier
             .padding(inner)
             .fillMaxSize()
+            .nestedScroll(hideOnScroll)
     ) {
     Column(Modifier.fillMaxSize()) {
         if (!(state.isLoaded && state.needsCityChoice) && !state.needsCountryChoice) {
@@ -172,8 +205,15 @@ fun StationsScreen(
             }
         }
     }
-    if (state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice) {
-        FilterControls(viewModel, state, onRequestLocation, Modifier.align(Alignment.BottomCenter))
+    AnimatedVisibility(
+        visible = isFilterBarVisible && state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice,
+        enter = slideInVertically { it } + fadeIn(),
+        exit = slideOutVertically { it } + fadeOut(),
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        FilterBar(viewModel, state)
     }
     }
     }
@@ -604,35 +644,6 @@ private fun PriceCell(
 }
 
 @Composable
-private fun FilterControls(
-    viewModel: StationsViewModel,
-    state: StationsUiState,
-    onRequestLocation: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Spacer(Modifier.size(56.dp))
-        Spacer(Modifier.weight(1f))
-        FilterBar(viewModel, state)
-        Spacer(Modifier.weight(1f))
-        FloatingActionButton(
-            onClick = onRequestLocation,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = CircleShape,
-            modifier = Modifier.size(56.dp)
-        ) {
-            Icon(Icons.Filled.NearMe, stringResource(R.string.listview_city_uselocation))
-        }
-    }
-}
-
-@Composable
 private fun FilterBar(viewModel: StationsViewModel, state: StationsUiState) {
     Row(
         Modifier
@@ -646,7 +657,7 @@ private fun FilterBar(viewModel: StationsViewModel, state: StationsUiState) {
         CountryMenu(viewModel, state)
         if (state.brandOptions.isNotEmpty()) {
             BarDivider()
-            BrandMenu(viewModel, state)
+            BrandMenu(viewModel, state, Modifier.weight(1f, fill = false))
         }
         BarDivider()
         FuelSortMenu(viewModel, state)
@@ -676,20 +687,17 @@ private fun BarSegment(
             .height(44.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CompositionLocalProvider(LocalContentColor provides tint) { leading() }
         if (title != null) {
             Spacer(Modifier.width(6.dp))
-            Text(
+            ShrinkToFitText(
                 title,
                 color = tint,
-                fontSize = 16.sp,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 90.dp)
+                modifier = Modifier.weight(1f, fill = false)
             )
         }
         Spacer(Modifier.width(6.dp))
@@ -698,6 +706,36 @@ private fun BarSegment(
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
     }
+}
+
+@Composable
+private fun ShrinkToFitText(
+    text: String,
+    color: Color,
+    fontWeight: FontWeight,
+    modifier: Modifier = Modifier
+) {
+    val maxSize = 16f
+    val minSize = 8f
+    var size by remember(text) { mutableStateOf(maxSize) }
+    var fits by remember(text) { mutableStateOf(false) }
+    Text(
+        text,
+        color = color,
+        fontSize = size.sp,
+        fontWeight = fontWeight,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout ->
+            if (layout.hasVisualOverflow && size > minSize) {
+                size = maxOf(minSize, size - 1f)
+            } else {
+                fits = true
+            }
+        },
+        modifier = modifier.drawWithContent { if (fits) drawContent() }
+    )
 }
 
 @Composable
@@ -732,10 +770,10 @@ private fun CountryMenu(viewModel: StationsViewModel, state: StationsUiState) {
 }
 
 @Composable
-private fun BrandMenu(viewModel: StationsViewModel, state: StationsUiState) {
+private fun BrandMenu(viewModel: StationsViewModel, state: StationsUiState, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     val selected = state.brandOptions.firstOrNull { it.key == state.brand }
-    Box {
+    Box(modifier) {
         BarSegment(title = selected?.title, active = selected != null, onClick = { open = true }) {
             val logo = selected?.logo
             if (logo != null) {

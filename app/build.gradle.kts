@@ -13,8 +13,8 @@ android {
         applicationId = "com.aitorsola.gas4oil"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.3.0"
+        versionCode = 4
+        versionName = "1.3.1"
         resourceConfigurations += listOf("es", "en", "ca", "gl", "eu")
     }
 

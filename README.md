@@ -19,10 +19,10 @@ El APK de cada versión está en [Releases](https://github.com/aitorsola/gas4oil
 
 ## Funciones
 
-- Estaciones ordenadas por cercanía, precio ascendente o descendente
+- Estaciones ordenadas por cercanía o por precio
 - Selector de país; con ubicación se detecta automáticamente
 - Búsqueda por población y selector de población cuando no hay ubicación
-- Filtro por marca y por combustible (95, 95+, 98, diésel, diésel+, GLP, E10, E85 según el país)
+- Filtro por marca y por combustible (95, 95+, 98, diésel, diésel+, GLP, E10, E85 según el país) en una barra flotante que se oculta al desplazarte por la lista
 - Coste de llenar tu depósito y la estación más barata a 50 km, con ruta
 - Favoritos con precios actualizados
 - Tema claro, oscuro o del sistema
