@@ -55,10 +55,14 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -113,9 +117,19 @@ fun StationsScreen(
         }
     }
     LaunchedEffect(state.stations) { isFilterBarVisible = true }
+    val snackbarHost = remember { SnackbarHostState() }
+    val refreshFailedMessage = stringResource(R.string.error_refreshfailed)
+    LaunchedEffect(state.refreshFailed) {
+        if (state.refreshFailed) {
+            snackbarHost.showSnackbar(refreshFailedMessage)
+            viewModel.refreshFailedShown()
+        }
+    }
+    val showsError = state.isLoaded && !state.isLoading && state.loadErrorKind != null
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -150,18 +164,24 @@ fun StationsScreen(
             .nestedScroll(hideOnScroll)
     ) {
     Column(Modifier.fillMaxSize()) {
-        if (!(state.isLoaded && state.needsCityChoice) && !state.needsCountryChoice) {
+        if (!(state.isLoaded && state.needsCityChoice) && !state.needsCountryChoice && !showsError) {
             SearchField(query, onQueryChange = { query = it }, viewModel = viewModel)
         }
         when {
             state.needsCountryChoice -> CountryPrompt(viewModel, state, onRequestLocation)
 
-            state.isPreparing || state.isLoading ->
+            state.isPreparing || state.isLoading || state.isAwaitingLocation ->
                 LazyColumn(Modifier.fillMaxSize()) { items(4) { SkeletonRow() } }
+
+            showsError -> ErrorPlaceholder(state.loadErrorKind!!) { viewModel.retry() }
 
             state.needsCityChoice -> CityPrompt(viewModel, state, onRequestLocation)
 
-            state.stations.isEmpty() -> EmptyState(state, viewModel)
+            state.stations.isEmpty() -> StatePlaceholder(
+                icon = Icons.Filled.SearchOff,
+                title = stringResource(R.string.listview_empty),
+                message = stringResource(R.string.listview_empty_hint)
+            )
 
             else -> PullToRefreshBox(
                 isRefreshing = refreshing,
@@ -206,7 +226,7 @@ fun StationsScreen(
         }
     }
     AnimatedVisibility(
-        visible = isFilterBarVisible && state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice,
+        visible = isFilterBarVisible && state.isLoaded && !state.needsCityChoice && !state.needsCountryChoice && !showsError,
         enter = slideInVertically { it } + fadeIn(),
         exit = slideOutVertically { it } + fadeOut(),
         modifier = Modifier
@@ -378,6 +398,26 @@ private fun CityPrompt(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (state.locationFailed) {
+                Spacer(Modifier.height(18.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            RoundedCornerShape(14.dp)
+                        )
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.LocationOff, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        stringResource(R.string.listview_city_locationfailed),
+                        fontSize = 14.sp, fontWeight = FontWeight.Medium
+                    )
+                }
+            }
             Spacer(Modifier.height(22.dp))
             OutlinedTextField(
                 value = query,
@@ -473,32 +513,6 @@ private fun CityPrompt(
                 Text(stringResource(R.string.listview_city_uselocation))
             }
             Spacer(Modifier.height(40.dp))
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(state: StationsUiState, viewModel: StationsViewModel) {
-    val message = when (state.loadErrorKind) {
-        G4OException.Kind.NETWORK -> stringResource(R.string.error_network)
-        G4OException.Kind.BAD_STATUS -> stringResource(R.string.error_network)
-        G4OException.Kind.EMPTY -> stringResource(R.string.error_emptyresponse)
-        G4OException.Kind.PARSE -> stringResource(R.string.error_parse)
-        null -> stringResource(R.string.listview_empty)
-    }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(message, textAlign = TextAlign.Center, fontSize = 18.sp)
-        if (state.loadErrorKind != null) {
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { viewModel.load() }) {
-                Text(stringResource(R.string.common_retry))
-            }
         }
     }
 }
@@ -819,7 +833,11 @@ private fun FuelSortMenu(viewModel: StationsViewModel, state: StationsUiState) {
     Box {
         BarSegment(title = fuelTag(state.fuel), active = active, onClick = { open = true }) {
             Icon(
-                if (state.effectiveSort == StationSort.NEAREST) Icons.Filled.NearMe else Icons.Filled.ArrowDownward,
+                when (state.effectiveSort) {
+                    StationSort.NEAREST -> Icons.Filled.NearMe
+                    StationSort.CHEAPEST -> Icons.Filled.ArrowDownward
+                    StationSort.NEARBY_CHEAPEST -> Icons.Filled.LocationOn
+                },
                 null,
                 Modifier.size(18.dp)
             )
@@ -848,14 +866,16 @@ private fun FuelSortMenu(viewModel: StationsViewModel, state: StationsUiState) {
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-            StationSort.entries.filter { state.hasCoordinates || it != StationSort.NEAREST }.forEach { sort ->
+            StationSort.entries.filter { state.hasCoordinates || it == StationSort.CHEAPEST }.forEach { sort ->
                 val label = when (sort) {
                     StationSort.NEAREST -> R.string.listview_sortorder_near
                     StationSort.CHEAPEST -> R.string.listview_sortorder_down
+                    StationSort.NEARBY_CHEAPEST -> R.string.listview_sortorder_neardown
                 }
                 val icon = when (sort) {
                     StationSort.NEAREST -> Icons.Filled.MyLocation
                     StationSort.CHEAPEST -> Icons.Filled.ArrowDownward
+                    StationSort.NEARBY_CHEAPEST -> Icons.Filled.LocationOn
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(label)) },

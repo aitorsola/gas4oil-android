@@ -28,6 +28,7 @@
     <string name="listview_sort_title">Ordena per</string>
     <string name="listview_sortorder_near">Proximitat</string>
     <string name="listview_sortorder_down">Preu més baix</string>
+    <string name="listview_sortorder_neardown">Properes i barates</string>
     <string name="listview_brand_all">Totes les marques</string>
     <string name="listview_sorttype_all_button">Tot</string>
     <string name="listview_sorttype_near95_button">A prop 95</string>
@@ -97,4 +98,12 @@
     <string name="country_italy">Itàlia</string>
     <string name="country_croatia">Croàcia</string>
     <string name="listview_cheapest_title">La més barata · %1$s</string>
+    <string name="error_offline_title">Sense connexió</string>
+    <string name="error_offline_message">Comprova la connexió a internet i torna-ho a provar</string>
+    <string name="error_service_title">El servei no respon</string>
+    <string name="error_data_title">Dades no disponibles</string>
+    <string name="error_refreshfailed">No s\'han pogut actualitzar els preus. Es mostren les últimes dades</string>
+    <string name="listview_empty_hint">Prova amb un altre combustible, marca o localitat</string>
+    <string name="favorites_empty_hint">Toca l\'estrella d\'una benzinera per desar-la aquí</string>
+    <string name="listview_city_locationfailed">No hem pogut localitzar-te. Tria una localitat o torna-ho a provar</string>
 </resources>

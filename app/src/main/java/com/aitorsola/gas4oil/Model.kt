@@ -203,7 +203,7 @@ enum class Country(
 }
 
 enum class StationSort(val storageKey: String) {
-    NEAREST("nearest"), CHEAPEST("cheapest");
+    NEARBY_CHEAPEST("nearbyCheapest"), NEAREST("nearest"), CHEAPEST("cheapest");
 
     companion object {
         fun from(key: String?) = entries.firstOrNull { it.storageKey == key }

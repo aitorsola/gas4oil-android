@@ -28,6 +28,7 @@
     <string name="listview_sort_title">Ordenatu honela</string>
     <string name="listview_sortorder_near">Hurbiltasuna</string>
     <string name="listview_sortorder_down">Prezio baxuena</string>
+    <string name="listview_sortorder_neardown">Hurbil eta merkeenak</string>
     <string name="listview_brand_all">Marka guztiak</string>
     <string name="listview_sorttype_all_button">Dena</string>
     <string name="listview_sorttype_near95_button">Gertu 95</string>
@@ -97,4 +98,12 @@
     <string name="country_italy">Italia</string>
     <string name="country_croatia">Kroazia</string>
     <string name="listview_cheapest_title">Merkeena · %1$s</string>
+    <string name="error_offline_title">Konexiorik ez</string>
+    <string name="error_offline_message">Egiaztatu interneteko konexioa eta saiatu berriro</string>
+    <string name="error_service_title">Zerbitzuak ez du erantzuten</string>
+    <string name="error_data_title">Datuak ez daude eskuragarri</string>
+    <string name="error_refreshfailed">Ezin izan dira prezioak eguneratu. Azken datuak erakusten dira</string>
+    <string name="listview_empty_hint">Probatu beste erregai, marka edo herri batekin</string>
+    <string name="favorites_empty_hint">Sakatu gasolindegi baten izarra hemen gordetzeko</string>
+    <string name="listview_city_locationfailed">Ezin izan zaitugu kokatu. Aukeratu herri bat edo saiatu berriro</string>
 </resources>

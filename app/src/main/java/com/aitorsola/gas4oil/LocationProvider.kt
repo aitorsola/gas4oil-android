@@ -8,6 +8,7 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -37,8 +38,7 @@ class LocationProvider(private val context: Context) {
 
     private fun lastKnown(manager: LocationManager): Location? {
         if (!hasPermission) return null
-        val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
-        return providers.mapNotNull {
+        return manager.getProviders(true).mapNotNull {
             runCatching { manager.getLastKnownLocation(it) }.getOrNull()
         }.filter { System.currentTimeMillis() - it.time < 30 * 60_000 }
             .maxByOrNull { it.time }
@@ -50,23 +50,22 @@ class LocationProvider(private val context: Context) {
                 cont.resume(null)
                 return@suspendCancellableCoroutine
             }
-            val provider = when {
-                manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ->
-                    LocationManager.NETWORK_PROVIDER
-                manager.isProviderEnabled(LocationManager.GPS_PROVIDER) ->
-                    LocationManager.GPS_PROVIDER
-                else -> null
-            }
-            if (provider == null) {
+            val providers = manager.getProviders(true) - LocationManager.PASSIVE_PROVIDER
+            if (providers.isEmpty()) {
                 cont.resume(null)
                 return@suspendCancellableCoroutine
             }
-            val listener = android.location.LocationListener { location ->
+            lateinit var listener: android.location.LocationListener
+            listener = android.location.LocationListener { location ->
+                runCatching { manager.removeUpdates(listener) }
                 if (cont.isActive) cont.resume(location)
             }
-            runCatching {
-                manager.requestSingleUpdate(provider, listener, null)
-            }.onFailure { if (cont.isActive) cont.resume(null) }
+            val requested = providers.count { provider ->
+                runCatching {
+                    manager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+                }.isSuccess
+            }
+            if (requested == 0 && cont.isActive) cont.resume(null)
             cont.invokeOnCancellation { runCatching { manager.removeUpdates(listener) } }
         }
 

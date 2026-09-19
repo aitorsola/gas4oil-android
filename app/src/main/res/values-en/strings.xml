@@ -28,6 +28,7 @@
     <string name="listview_sort_title">Sort by</string>
     <string name="listview_sortorder_near">Nearest</string>
     <string name="listview_sortorder_down">Lowest price</string>
+    <string name="listview_sortorder_neardown">Nearby &amp; cheapest</string>
     <string name="listview_brand_all">All brands</string>
     <string name="listview_sorttype_all_button">All</string>
     <string name="listview_sorttype_near95_button">Nearest 95</string>
@@ -97,4 +98,12 @@
     <string name="country_italy">Italy</string>
     <string name="country_croatia">Croatia</string>
     <string name="listview_cheapest_title">Cheapest · %1$s</string>
+    <string name="error_offline_title">No connection</string>
+    <string name="error_offline_message">Check your internet connection and try again</string>
+    <string name="error_service_title">The service is not responding</string>
+    <string name="error_data_title">Data unavailable</string>
+    <string name="error_refreshfailed">Prices could not be updated. Showing the latest data</string>
+    <string name="listview_empty_hint">Try another fuel, brand or town</string>
+    <string name="favorites_empty_hint">Tap the star on a station to save it here</string>
+    <string name="listview_city_locationfailed">We couldn\'t find your location. Pick a town or try again</string>
 </resources>

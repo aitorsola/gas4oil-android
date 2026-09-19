@@ -55,13 +55,12 @@ fun FavouritesScreen(
         }
     ) { inner ->
     if (state.favourites.isEmpty()) {
-        Column(
-            Modifier.padding(inner).fillMaxSize().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(stringResource(R.string.favorites_empty), fontSize = 18.sp)
-        }
+        StatePlaceholder(
+            icon = Icons.Filled.Star,
+            title = stringResource(R.string.favorites_empty),
+            modifier = Modifier.padding(inner),
+            message = stringResource(R.string.favorites_empty_hint)
+        )
         return@Scaffold
     }
     val context = LocalContext.current

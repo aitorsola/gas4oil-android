@@ -14,7 +14,16 @@ import okhttp3.TlsVersion
 import java.util.concurrent.TimeUnit
 
 class G4OException(val kind: Kind, cause: Throwable? = null) : Exception(cause) {
-    enum class Kind { NETWORK, BAD_STATUS, EMPTY, PARSE }
+    enum class Kind { OFFLINE, NETWORK, BAD_STATUS, EMPTY, PARSE }
+
+    companion object {
+        fun network(cause: Exception): G4OException {
+            val offline = cause is java.net.UnknownHostException ||
+                cause is java.net.ConnectException ||
+                cause is java.net.NoRouteToHostException
+            return G4OException(if (offline) Kind.OFFLINE else Kind.NETWORK, cause)
+        }
+    }
 }
 
 object StationsApi {
@@ -77,7 +86,7 @@ object StationsApi {
         val response = try {
             client.newCall(request).execute()
         } catch (e: Exception) {
-            throw G4OException(G4OException.Kind.NETWORK, e)
+            throw G4OException.network(e)
         }
         response.use {
             if (!it.isSuccessful) throw G4OException(G4OException.Kind.BAD_STATUS)
@@ -97,7 +106,7 @@ object StationsApi {
         val response = try {
             client.newCall(request).execute()
         } catch (e: Exception) {
-            throw G4OException(G4OException.Kind.NETWORK, e)
+            throw G4OException.network(e)
         }
         response.use {
             if (!it.isSuccessful) throw G4OException(G4OException.Kind.BAD_STATUS)

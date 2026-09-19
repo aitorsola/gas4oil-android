@@ -29,6 +29,7 @@
     <string name="listview_sort_title">Ordenar por</string>
     <string name="listview_sortorder_near">Cercanía</string>
     <string name="listview_sortorder_down">Precio más bajo</string>
+    <string name="listview_sortorder_neardown">Cercanas y baratas</string>
     <string name="listview_brand_all">Todas las marcas</string>
     <string name="listview_sorttype_all_button">Todo</string>
     <string name="listview_sorttype_near95_button">Cerca 95</string>
@@ -98,4 +99,12 @@
     <string name="country_italy">Italia</string>
     <string name="country_croatia">Croacia</string>
     <string name="listview_cheapest_title">La más barata · %1$s</string>
+    <string name="error_offline_title">Sin conexión</string>
+    <string name="error_offline_message">Comprueba tu conexión a internet e inténtalo de nuevo</string>
+    <string name="error_service_title">El servicio no responde</string>
+    <string name="error_data_title">Datos no disponibles</string>
+    <string name="error_refreshfailed">No se han podido actualizar los precios. Se muestran los últimos datos</string>
+    <string name="listview_empty_hint">Prueba con otro combustible, marca o localidad</string>
+    <string name="favorites_empty_hint">Toca la estrella de una gasolinera para guardarla aquí</string>
+    <string name="listview_city_locationfailed">No hemos podido localizarte. Elige una localidad o inténtalo de nuevo</string>
 </resources>

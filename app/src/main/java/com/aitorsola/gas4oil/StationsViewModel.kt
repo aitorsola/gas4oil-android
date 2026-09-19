@@ -30,6 +30,8 @@ data class StationsUiState(
     val brand: String? = null,
     val city: String? = null,
     val locationDenied: Boolean = false,
+    val locationFailed: Boolean = false,
+    val refreshFailed: Boolean = false,
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val vehicle: Vehicle? = null,
     val hasCoordinates: Boolean = false,
@@ -38,6 +40,8 @@ data class StationsUiState(
     val isPreparing: Boolean get() = stations.isEmpty() && !isLoaded
 
     val needsCityChoice: Boolean get() = !hasCoordinates && city == null
+
+    val isAwaitingLocation: Boolean get() = isLocating && needsCityChoice
 
     val needsCountryChoice: Boolean get() = !hasChosenCountry && !isLocating
 
@@ -94,9 +98,10 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
         resolveLocation()
     }
 
-    fun load() {
+    fun load(keepingData: Boolean = false) {
         fetchJob?.cancel()
-        _state.update { it.copy(isLoading = true, loadErrorKind = null) }
+        val keepsData = keepingData && allStations.isNotEmpty()
+        _state.update { it.copy(isLoading = !keepsData, loadErrorKind = null) }
         val country = _state.value.country
         fetchJob = viewModelScope.launch {
             try {
@@ -104,10 +109,23 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
                 adopt(downloaded)
             } catch (e: G4OException) {
                 _state.update {
-                    it.copy(isLoading = false, isLoaded = true, loadErrorKind = e.kind)
+                    if (allStations.isEmpty()) {
+                        it.copy(isLoading = false, isLoaded = true, loadErrorKind = e.kind)
+                    } else {
+                        it.copy(isLoading = false, isLoaded = true, refreshFailed = true)
+                    }
                 }
             }
         }
+    }
+
+    fun retry() {
+        load()
+        if (locationProvider.hasPermission && coordinates == null) resolveLocation()
+    }
+
+    fun refreshFailedShown() {
+        _state.update { it.copy(refreshFailed = false) }
     }
 
     fun locationRevoked() {
@@ -134,10 +152,10 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 return@launch
             }
-            _state.update { it.copy(isLocating = true) }
+            _state.update { it.copy(isLocating = true, locationFailed = false) }
             val place = locationProvider.current()
             if (place == null) {
-                _state.update { it.copy(locationDenied = true, isLocating = false) }
+                _state.update { it.copy(locationDenied = true, locationFailed = true, isLocating = false) }
                 return@launch
             }
             coordinates = place.location
@@ -149,7 +167,7 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
             val current = _state.value.country
             _state.update {
                 it.copy(
-                    locationDenied = false, hasCoordinates = true,
+                    locationDenied = false, locationFailed = false, hasCoordinates = true,
                     city = locationTitle(current), isLocating = false
                 )
             }
@@ -332,7 +350,7 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
         if (searchCity != null) stations else fillCandidates(stations, coordinates)
 
     suspend fun reload() {
-        load()
+        load(keepingData = true)
         fetchJob?.join()
         if (locationProvider.hasPermission && coordinates == null) resolveLocation()
     }
@@ -358,16 +376,19 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
         }
         val byPrice = priceScope(filtered).sortedBy { it.price(fuel) ?: Double.MAX_VALUE }
         val here = coordinates
-        val list = if (here != null && current.sort == StationSort.NEAREST) {
-            val result = FloatArray(1)
-            filtered.sortedBy { station ->
-                Location.distanceBetween(
-                    here.latitude, here.longitude, station.latitude, station.longitude, result
-                )
-                result[0]
-            }.take(MAX_RESULTS)
-        } else {
-            byPrice.take(MAX_RESULTS)
+        val list = when {
+            here == null || current.sort == StationSort.CHEAPEST -> byPrice.take(MAX_RESULTS)
+            current.sort == StationSort.NEAREST -> filtered
+                .sortedBy { distanceTo(it) }
+                .take(MAX_RESULTS)
+            else -> {
+                val byDistance = filtered.map { it to (distanceTo(it) ?: Float.MAX_VALUE) }.sortedBy { it.second }
+                val near = byDistance.filter { it.second <= CLOSE_RADIUS_M }
+                val candidates = if (near.size >= MIN_CLOSE_STATIONS) near else byDistance.take(MIN_CLOSE_STATIONS)
+                candidates
+                    .sortedWith(compareBy({ it.first.price(fuel) ?: Double.MAX_VALUE }, { it.second }))
+                    .map { it.first }
+            }
         }
         _state.update { it.copy(stations = list, cheapestNearby = byPrice.firstOrNull()) }
     }
@@ -377,5 +398,7 @@ class StationsViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         const val MAX_RESULTS = 200
+        const val CLOSE_RADIUS_M = 10_000f
+        const val MIN_CLOSE_STATIONS = 20
     }
 }
