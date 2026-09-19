@@ -16,6 +16,9 @@ El APK de cada versión está en [Releases](https://github.com/aitorsola/gas4oil
   <img src="docs/screenshots/poblacion.png" width="200" alt="Selector de población" />
   <img src="docs/screenshots/vehiculo.png" width="200" alt="Mi vehículo con el coste de llenado" />
 </p>
+<p align="center">
+  <img src="docs/screenshots/favoritos.png" width="200" alt="Estaciones favoritas" />
+</p>
 
 ## Funciones
 
